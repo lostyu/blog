@@ -8,10 +8,17 @@ var bodyParser = require('body-parser');
 var routes = require('./routes/index');
 var settings = require('./settings');
 var flash = require('connect-flash');
+
+var fs = require('fs');
+var accessLog = fs.createWriteStream('access.log', {flags: 'a'});
+var errorLog = fs.createWriteStream('error.log', {flags: 'a'});
+
 var app = express();
 
 var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
+
+app.use(logger({stream: accessLog}));
 
 app.use(session({
     secret: settings.cookieSecret,
@@ -41,6 +48,12 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(function (err, req, res, next) {
+  var meta = '[' + new Date() + '] ' + req.url + '\n';
+  errorLog.write(meta + err.stack + '\n');
+  next();
+});
 
 
 // 路由
